@@ -1,0 +1,39 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'services/notification_service.dart';
+import 'services/storage_service.dart';
+import 'services/prayer_calculator.dart';
+import 'screens/home_screen.dart';
+import 'theme/app_theme.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  tz.initializeTimeZones();
+  await NotificationService.init();
+  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
+  final loc = await StorageService.getLocation();
+  final lat = loc?['lat'] ?? 15.3694;
+  final lng = loc?['lng'] ?? 44.1910;
+  final prayers = PrayerCalculator(latitude: lat, longitude: lng, date: DateTime.now()).calculate();
+  await NotificationService.schedulePrayerNotifications(prayers);
+  await NotificationService.scheduleLateNightWarning();
+
+  runApp(const SalahApp());
+}
+
+class SalahApp extends StatelessWidget {
+  const SalahApp({super.key});
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+    title: 'الكود',
+    debugShowCheckedModeBanner: false,
+    theme: AppTheme.dark,
+    home: const HomeScreen(),
+    builder: (context, child) => Directionality(
+      textDirection: TextDirection.rtl,
+      child: child!,
+    ),
+  );
+}
