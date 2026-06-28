@@ -56,12 +56,8 @@ class PrayerCalculator {
     return _hourAngle(angle, decl);
   }
 
-  DateTime _toDateTime(double hours) {
-    int h = hours.floor();
-    int m = ((hours - h) * 60).round();
-    if (m == 60) { h++; m = 0; }
-    h = h % 24;
-    return DateTime(date.year, date.month, date.day, h, m);
+  double _toDateTime(double hours) {
+    return hours;
   }
 
   List<PrayerTime> calculate() {
@@ -73,18 +69,16 @@ class PrayerCalculator {
     double dhuhrTime   = transit;
     double asrTime     = transit + _asrAngle(decl);
     double maghribTime = transit + _hourAngle(-0.833, decl);
-    double ishaTime    = transit + _hourAngle(-19.0, decl) + // أم القرى: ١.٥ ساعة بعد المغرب
-        (maghribTime - transit) + 1.5 / 15;
 
-    // أم القرى: العشاء = المغرب + ٩٠ دقيقة
-    ishaTime = maghribTime + 1.5;
+    // إصلاح: العشاء حسب أم القرى = المغرب + 90 دقيقة
+    double ishaTime = maghribTime + 1.5;
 
     return [
-      PrayerTime(name: PrayerName.fajr,    time: _toDateTime(fajrTime)),
-      PrayerTime(name: PrayerName.dhuhr,   time: _toDateTime(dhuhrTime)),
-      PrayerTime(name: PrayerName.asr,     time: _toDateTime(asrTime)),
-      PrayerTime(name: PrayerName.maghrib, time: _toDateTime(maghribTime)),
-      PrayerTime(name: PrayerName.isha,    time: _toDateTime(ishaTime)),
+      PrayerTime(name: PrayerName.fajr,    time: DateTime(date.year, date.month, date.day, fajrTime.floor(), ((fajrTime % 1) * 60).round())),
+      PrayerTime(name: PrayerName.dhuhr,   time: DateTime(date.year, date.month, date.day, dhuhrTime.floor(), ((dhuhrTime % 1) * 60).round())),
+      PrayerTime(name: PrayerName.asr,     time: DateTime(date.year, date.month, date.day, asrTime.floor(), ((asrTime % 1) * 60).round())),
+      PrayerTime(name: PrayerName.maghrib, time: DateTime(date.year, date.month, date.day, maghribTime.floor(), ((maghribTime % 1) * 60).round())),
+      PrayerTime(name: PrayerName.isha,    time: DateTime(date.year, date.month, date.day, ishaTime.floor(), ((ishaTime % 1) * 60).round())),
     ];
   }
 }
