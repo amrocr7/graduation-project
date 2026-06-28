@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../models/prayer_model.dart';
 import '../services/storage_service.dart';
+import '../services/ai_coach_service.dart';
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
@@ -10,12 +11,22 @@ class StatsScreen extends StatefulWidget {
 
 class _StatsScreenState extends State<StatsScreen> {
   List<DayRecord> _days = [];
+  AiPrayerInsight? _insight;
 
   @override
   void initState() { super.initState(); _load(); }
   Future<void> _load() async {
     final days = await StorageService.getLastDays(30);
-    setState(() => _days = days);
+    final today = await StorageService.getTodayRecord();
+    final streak = await StorageService.getStreak();
+    final insight = AiCoachService.buildDailyInsight(
+      recentDays: days,
+      today: today,
+      now: DateTime.now(),
+      nextPrayer: null,
+      streak: streak,
+    );
+    setState(() { _days = days; _insight = insight; });
   }
 
   int get _totalDone   => _days.fold(0, (s, d) => s + d.doneCount);
@@ -84,7 +95,8 @@ class _StatsScreenState extends State<StatsScreen> {
           Expanded(child: _statCard('🌟 كاملة', '$_perfectDays', AppColors.primary)),
         ]),
 
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
+        if (_insight != null) ...[_aiStatsCard(), const SizedBox(height: 20)],
         const Text('أضعف صلاة عندك', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
         const SizedBox(height: 12),
 
@@ -120,6 +132,35 @@ class _StatsScreenState extends State<StatsScreen> {
       ]),
     ),
   );
+
+
+
+  Widget _aiStatsCard() {
+    final insight = _insight!;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.primary.withOpacity(0.6)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Row(children: [
+          Icon(Icons.psychology_alt, color: AppColors.primary, size: 20),
+          SizedBox(width: 8),
+          Text('تحليل الذكاء', style: TextStyle(color: AppColors.primary, fontSize: 15, fontWeight: FontWeight.bold)),
+        ]),
+        const SizedBox(height: 8),
+        Text(insight.message, style: const TextStyle(color: AppColors.textPrimary, fontSize: 13, height: 1.45)),
+        const SizedBox(height: 10),
+        ...insight.actions.map((action) => Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Text('• $action', style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+        )),
+      ]),
+    );
+  }
 
   Color _pctColor(double p) {
     if (p >= 0.9) return AppColors.success;
