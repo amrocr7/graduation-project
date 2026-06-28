@@ -37,7 +37,6 @@ class PrayerCalculator {
     double g = (357.529 + 0.98560028 * D) % 360;
     double q = (280.459 + 0.98564736 * D) % 360;
     double L = (q + 1.915 * _sin(g) + 0.020 * _sin(2 * g)) % 360;
-    double R = 1.00014 - 0.01671 * _cos(g) - 0.00014 * _cos(2 * g);
     double e = 23.439 - 0.00000036 * D;
     double RA = _atan2(_cos(e) * _sin(L), _cos(L)) / 15;
     double eqT = q / 15 - _fixHour(RA);
@@ -135,7 +134,6 @@ class PrayerCalculator {
     double asrShadow = 1.0;      // شافعي
 
     double fajrHA   = _hourAngle(fajrAngle, decl);
-    double sunriseHA = _hourAngle(sunriseAngle, decl);
     double asrAngle = -_asin(1 / (asrShadow + _mathTan((decl - latitude).abs() * 3.14159265358979 / 180)));
     double asrHA    = _hourAngle(asrAngle, decl);
     double maghribHA = _hourAngle(sunriseAngle, decl);

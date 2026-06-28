@@ -56,9 +56,6 @@ class PrayerCalculator {
     return _hourAngle(angle, decl);
   }
 
-  double _toDateTime(double hours) {
-    return hours;
-  }
 
   List<PrayerTime> calculate() {
     final sun    = _sunPosition();
