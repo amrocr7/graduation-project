@@ -5,6 +5,7 @@ import '../models/prayer_model.dart';
 import '../services/prayer_calculator.dart';
 import '../services/storage_service.dart';
 import '../services/honor_service.dart';
+import '../services/ai_coach_service.dart';
 import '../widgets/honor_bar_widget.dart';
 import 'force_prayer_screen.dart';
 import 'streak_screen.dart';
@@ -24,6 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
   DayRecord? _todayRecord;
   int _streak = 0;
   HonorRecord? _honor;
+  AiPrayerInsight? _aiInsight;
   Timer? _timer;
   Duration _nextPrayerCountdown = Duration.zero;
   PrayerTime? _nextPrayer;
@@ -59,7 +61,17 @@ class _HomeScreenState extends State<HomeScreen> {
     final record = await StorageService.getTodayRecord();
     final streak = await StorageService.getStreak();
     final honor  = await StorageService.getHonor();
-    setState(() { _prayers = prayers; _todayRecord = record; _streak = streak; _honor = honor; });
+    final recentDays = await StorageService.getLastDays(14);
+    final now = DateTime.now();
+    final nextPrayer = prayers.where((p) => p.time.isAfter(now)).firstOrNull;
+    final insight = AiCoachService.buildDailyInsight(
+      recentDays: recentDays,
+      today: record,
+      now: now,
+      nextPrayer: nextPrayer,
+      streak: streak,
+    );
+    setState(() { _prayers = prayers; _todayRecord = record; _streak = streak; _honor = honor; _aiInsight = insight; });
     _tick();
   }
 
@@ -152,6 +164,7 @@ class _HomeScreenState extends State<HomeScreen> {
           _header(), const SizedBox(height: 20),
           _streakCard(), const SizedBox(height: 16),
           if (_nextPrayer != null) ...[_nextPrayerCard(), const SizedBox(height: 16)],
+          if (_aiInsight != null) ...[_aiCoachCard(), const SizedBox(height: 16)],
           _prayersList(), const SizedBox(height: 16),
           if (_honor != null) _honorSection(), const SizedBox(height: 16),
           _quickActions(), const SizedBox(height: 24),
@@ -245,6 +258,45 @@ class _HomeScreenState extends State<HomeScreen> {
           style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
     ]),
   );
+
+
+
+  Widget _aiCoachCard() {
+    final insight = _aiInsight!;
+    final riskPct = (insight.riskScore * 100).round();
+    final accent = insight.isHighRisk ? AppColors.warning : AppColors.primary;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: [AppColors.card, accent.withOpacity(0.12)]),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: accent.withOpacity(0.7)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Row(children: [
+            Icon(Icons.auto_awesome, color: accent, size: 20),
+            const SizedBox(width: 8),
+            Text(insight.title, style: TextStyle(color: accent, fontSize: 15, fontWeight: FontWeight.bold)),
+          ]),
+          Text('خطر $riskPct%', style: const TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+        ]),
+        const SizedBox(height: 10),
+        Text(insight.message, style: const TextStyle(color: AppColors.textPrimary, fontSize: 13, height: 1.45)),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: insight.actions.map((action) => Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(18), border: Border.all(color: AppColors.border)),
+            child: Text(action, style: const TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+          )).toList(),
+        ),
+      ]),
+    );
+  }
 
   Widget _prayersList() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
