@@ -4,28 +4,37 @@ import 'package:timezone/data/latest.dart' as tz_data;
 import '../models/prayer_model.dart';
 
 class NotificationService {
-  static final _plugin = FlutterLocalNotificationsPlugin();
+  static final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
+  static bool _initialized = false;
 
   static Future<void> init() async {
-    tz_data.initializeTimeZones();
-    const android = AndroidInitializationSettings('@mipmap/ic_launcher');
-    await _plugin.initialize(const InitializationSettings(android: android));
+    if (!_initialized) {
+      tz_data.initializeTimeZones();
+      const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+      await _plugin.initialize(const InitializationSettings(android: android));
+      _initialized = true;
+    }
   }
 
   static tz.TZDateTime _toTZ(DateTime dt) {
-    final location = tz.getLocation('Asia/Riyadh');
+    final location = tz.local;
     return tz.TZDateTime.from(dt, location);
   }
 
   static Future<void> schedulePrayerNotifications(List<PrayerTime> prayers) async {
     try {
-      await _plugin.cancelAll();
+      // لا نحذف كل شيء — نحذف فقط إشعارات الصلاة السابقة
+      for (final p in prayers) {
+        await _plugin.cancel(p.name.index);
+      }
+
       for (final prayer in prayers) {
-        if (prayer.time.isAfter(DateTime.now())) {
+        final now = DateTime.now();
+        if (prayer.time.isAfter(now)) {
           await _plugin.zonedSchedule(
             prayer.name.index,
             '${prayer.name.emoji} وقت ${prayer.name.arabic}',
-            'الصلاة الآن — لا "بعدين"',
+            'الصلاة الآن — لا تأجيل',
             _toTZ(prayer.time),
             const NotificationDetails(
               android: AndroidNotificationDetails(
@@ -39,7 +48,6 @@ class NotificationService {
                 playSound: true,
               ),
             ),
-            // inexact بدل exact — لا يحتاج إذن خاص
             androidScheduleMode: AndroidScheduleMode.inexact,
             uiLocalNotificationDateInterpretation:
                 UILocalNotificationDateInterpretation.absoluteTime,
@@ -47,7 +55,7 @@ class NotificationService {
         }
       }
     } catch (e) {
-      // لو فشلت الإشعارات، التطبيق يكمل بدون crash
+      // لا نكسر التطبيق بسبب الإشعارات
       print('Notification error: $e');
     }
   }
@@ -55,15 +63,19 @@ class NotificationService {
   static Future<void> scheduleLateNightWarning() async {
     try {
       final now = DateTime.now();
-      var midnight = DateTime(now.year, now.month, now.day, 0, 30);
-      if (midnight.isBefore(now)) {
-        midnight = midnight.add(const Duration(days: 1));
+      var target = DateTime(now.year, now.month, now.day, 0, 30);
+
+      if (target.isBefore(now)) {
+        target = target.add(const Duration(days: 1));
       }
+
+      await _plugin.cancel(99);
+
       await _plugin.zonedSchedule(
         99,
-        '⚠️ وقت خطر',
-        'نام — البلايستيشن يكفي. الفجر قريب.',
-        _toTZ(midnight),
+        '⚠️ وقت راحة',
+        'خفف استخدام الجوال، الفجر قريب',
+        _toTZ(target),
         const NotificationDetails(
           android: AndroidNotificationDetails(
             'warning_channel',
