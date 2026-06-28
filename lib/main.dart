@@ -11,6 +11,7 @@ import 'theme/app_theme.dart';
 
 const String kDailyPrayerTask = 'daily_prayer_refresh';
 
+@pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     if (task == kDailyPrayerTask) {

@@ -117,7 +117,6 @@ class StorageService {
   static Future<HonorRecord> updateHonor(int delta, String reason) async {
     final p      = await _prefs;
     final honor  = await getHonor();
-    final oldLevel = honor.level;
     honor.points = (honor.points + delta).clamp(0, 1000);
     honor.history.insert(0, {
       'delta': delta,
