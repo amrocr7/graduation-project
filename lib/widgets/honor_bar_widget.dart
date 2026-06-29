@@ -144,26 +144,37 @@ class _HonorChangeOverlayState extends State<HonorChangeOverlay>
       builder: (_, __) => Opacity(
         opacity: _fadeAnim.value,
         child: Transform.translate(
-          offset: Offset(0, -_slideAnim.value),
+          offset: Offset(isPos ? -_slideAnim.value : _slideAnim.value, 0),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: color, width: 1.5),
-              boxShadow: [BoxShadow(color: color.withOpacity(0.3), blurRadius: 12)],
+              color: const Color(0xEE120A04),
+              borderRadius: BorderRadius.circular(2),
+              border: Border.all(color: const Color(0xFFC7A15A), width: 1.2),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.55), blurRadius: 18, offset: const Offset(0, 8)),
+                BoxShadow(color: color.withOpacity(0.25), blurRadius: 24),
+              ],
             ),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Container(width: 42, height: 1, color: const Color(0xFFC7A15A)),
+                const SizedBox(width: 10),
+                Icon(isPos ? Icons.arrow_upward : Icons.arrow_downward, color: color, size: 18),
+                const SizedBox(width: 10),
+                Container(width: 42, height: 1, color: const Color(0xFFC7A15A)),
+              ]),
+              const SizedBox(height: 6),
               if (widget.levelUp || widget.levelDown) ...[
                 Text(
                   widget.levelUp ? '⬆️ ارتفع الشرف' : '⬇️ انخفض الشرف',
-                  style: TextStyle(color: color, fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: color, fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 1.2),
                 ),
                 const SizedBox(height: 4),
               ],
               Text(
                 isPos ? '+${widget.delta} شرف' : '${widget.delta} شرف',
-                style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.bold),
+                style: TextStyle(color: color, fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 1.4, shadows: [Shadow(color: color, blurRadius: 10)]),
               ),
               Text(widget.reason, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
             ]),

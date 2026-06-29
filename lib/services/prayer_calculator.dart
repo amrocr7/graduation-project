@@ -40,7 +40,7 @@ class PrayerCalculator {
 
   double _transit() {
     final sun = _sunPosition();
-    return 12 - longitude / 15 - sun['eqT']!;
+    return 12 - longitude / 15 - sun['eqT']! + date.timeZoneOffset.inMinutes / 60.0;
   }
 
   double _hourAngle(double angle, double decl) {

@@ -4,6 +4,7 @@ import '../models/prayer_model.dart';
 import '../services/storage_service.dart';
 import '../services/location_service.dart';
 import '../services/prayer_calculator.dart';
+import '../services/auth_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -16,6 +17,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Map<PrayerName, TimeOfDay> _manualTimes = {};
   Map<String, double>? _location;
   List<PrayerTime> _calculatedTimes = [];
+  bool _hasPassword = false;
+  bool _biometricEnabled = false;
 
   @override
   void initState() { super.initState(); _load(); }
@@ -24,6 +27,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final useManual = await StorageService.getUseManual();
     final manualRaw = await StorageService.getManualTimes();
     final loc = await StorageService.getLocation();
+    final hasPassword = await StorageService.hasAppPassword();
+    final biometricEnabled = await StorageService.getBiometricUnlockEnabled();
 
     Map<PrayerName, TimeOfDay> manual = {};
     if (manualRaw != null) {
@@ -51,6 +56,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _manualTimes = manual;
       _location = loc;
       _calculatedTimes = times;
+      _hasPassword = hasPassword;
+      _biometricEnabled = biometricEnabled;
     });
   }
 
@@ -155,6 +162,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
+  }
+
+
+  Future<void> _setPassword() async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: const Text('كلمة مرور التطبيق', style: TextStyle(color: AppColors.textPrimary)),
+        content: TextField(
+          controller: controller,
+          obscureText: true,
+          keyboardType: TextInputType.number,
+          style: const TextStyle(color: AppColors.textPrimary),
+          decoration: const InputDecoration(
+            hintText: 'اتركها فارغة لإلغاء القفل',
+            hintStyle: TextStyle(color: AppColors.textSecondary),
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء', style: TextStyle(color: AppColors.textSecondary))),
+          TextButton(onPressed: () => Navigator.pop(ctx, controller.text), child: const Text('حفظ', style: TextStyle(color: AppColors.primary))),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (result == null) return;
+    await StorageService.setAppPassword(result);
+    final hasPassword = await StorageService.hasAppPassword();
+    final biometric = await StorageService.getBiometricUnlockEnabled();
+    setState(() { _hasPassword = hasPassword; _biometricEnabled = biometric; });
+    _showSnack(hasPassword ? '✓ تم حفظ كلمة المرور' : 'تم إلغاء قفل التطبيق', AppColors.success);
   }
 
   void _showSnack(String msg, Color color) {
@@ -280,6 +321,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               );
             }),
+          ]),
+        ),
+
+        const SizedBox(height: 20),
+
+        // ===== الحماية =====
+        _sectionTitle('🔐 الحماية'),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: _cardDeco(),
+          child: Column(children: [
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              Text(_hasPassword ? 'كلمة المرور مفعّلة' : 'لا توجد كلمة مرور', style: const TextStyle(color: AppColors.textPrimary)),
+              TextButton(onPressed: _setPassword, child: Text(_hasPassword ? 'تغيير/إلغاء' : 'إضافة', style: const TextStyle(color: AppColors.primary))),
+            ]),
+            const Divider(color: AppColors.border),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('فتح بالبصمة / قفل الشاشة', style: TextStyle(color: AppColors.textPrimary)),
+              subtitle: const Text('يعمل بعد تفعيل كلمة المرور', style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+              value: _biometricEnabled,
+              activeColor: AppColors.primary,
+              onChanged: !_hasPassword ? null : (v) async {
+                if (v && !await AuthService.canUseBiometrics()) {
+                  _showSnack('البصمة أو قفل الشاشة غير متاح', AppColors.danger);
+                  return;
+                }
+                await StorageService.setBiometricUnlockEnabled(v);
+                setState(() => _biometricEnabled = v);
+              },
+            ),
           ]),
         ),
 

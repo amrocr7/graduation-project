@@ -6,7 +6,7 @@ import 'package:workmanager/workmanager.dart';
 import 'services/notification_service.dart';
 import 'services/storage_service.dart';
 import 'services/prayer_calculator.dart';
-import 'screens/home_screen.dart';
+import 'screens/lock_screen.dart';
 import 'theme/app_theme.dart';
 
 const String kDailyPrayerTask = 'daily_prayer_refresh';
@@ -73,7 +73,7 @@ class SalahApp extends StatelessWidget {
         title: 'الكود',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.dark,
-        home: const HomeScreen(),
+        home: const LockScreen(),
         builder: (context, child) => Directionality(
           textDirection: TextDirection.rtl,
           child: child!,
