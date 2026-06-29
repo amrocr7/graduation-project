@@ -12,6 +12,8 @@ class StorageService {
   static const _manualTimesKey = 'manual_times';
   static const _useManualKey   = 'use_manual';
   static const _dhikrKey       = 'dhikr';
+  static const _passwordKey    = 'app_password';
+  static const _biometricKey   = 'biometric_unlock';
 
   static Future<SharedPreferences> get _prefs => SharedPreferences.getInstance();
 
@@ -146,6 +148,34 @@ class StorageService {
     final p = await _prefs;
     final key = '${_dhikrKey}_${_todayStr()}';
     await p.setInt(key, 0);
+  }
+
+  // ===== قفل التطبيق =====
+  static Future<bool> hasAppPassword() async {
+    final p = await _prefs;
+    return (p.getString(_passwordKey) ?? '').isNotEmpty;
+  }
+  static Future<String?> getAppPassword() async {
+    final p = await _prefs;
+    final val = p.getString(_passwordKey);
+    return (val == null || val.isEmpty) ? null : val;
+  }
+  static Future<void> setAppPassword(String password) async {
+    final p = await _prefs;
+    if (password.trim().isEmpty) {
+      await p.remove(_passwordKey);
+      await p.setBool(_biometricKey, false);
+    } else {
+      await p.setString(_passwordKey, password.trim());
+    }
+  }
+  static Future<bool> getBiometricUnlockEnabled() async {
+    final p = await _prefs;
+    return p.getBool(_biometricKey) ?? false;
+  }
+  static Future<void> setBiometricUnlockEnabled(bool value) async {
+    final p = await _prefs;
+    await p.setBool(_biometricKey, value);
   }
 
   // ===== تصدير / استيراد =====

@@ -33,6 +33,15 @@ class HonorService {
     return await _applyDelta(bonus, 'استمريت $streak يوم');
   }
 
+  static Future<({HonorRecord honor, bool levelUp, bool levelDown})> applyAction({
+    required String title,
+    required int delta,
+    required String category,
+  }) async {
+    final sign = delta > 0 ? 'عمل جيد' : 'خطأ';
+    return _applyDelta(delta, '$sign: $title ($category)');
+  }
+
   static Future<({HonorRecord honor, bool levelUp, bool levelDown})> _applyDelta(
       int delta, String reason) async {
     final before = await StorageService.getHonor();
@@ -43,8 +52,8 @@ class HonorService {
     final levelUp   = newLevel.index > oldLevel.index;
     final levelDown = newLevel.index < oldLevel.index;
 
-    if (levelUp)   await SoundService.playHonorUp();
-    if (levelDown) await SoundService.playHonorDown();
+    if (delta > 0) await SoundService.playHonorUp();
+    if (delta < 0) await SoundService.playHonorDown();
 
     return (honor: honor, levelUp: levelUp, levelDown: levelDown);
   }

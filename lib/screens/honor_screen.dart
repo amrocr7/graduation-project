@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../models/prayer_model.dart';
 import '../services/storage_service.dart';
+import '../services/honor_service.dart';
 import '../widgets/honor_bar_widget.dart';
 
 class HonorScreen extends StatefulWidget {
@@ -11,9 +12,13 @@ class HonorScreen extends StatefulWidget {
 
 class _HonorScreenState extends State<HonorScreen> {
   HonorRecord? _honor;
+  final _actionController = TextEditingController();
 
   @override
   void initState() { super.initState(); _load(); }
+
+  @override
+  void dispose() { _actionController.dispose(); super.dispose(); }
 
   Future<void> _load() async {
     final h = await StorageService.getHonor();
@@ -95,6 +100,17 @@ class _HonorScreenState extends State<HonorScreen> {
             ]),
           ),
 
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _showActionDialog,
+              icon: const Icon(Icons.add_task),
+              label: const Text('تسجيل عمل جيد أو خطأ'),
+              style: ElevatedButton.styleFrom(backgroundColor: _levelColor, foregroundColor: Colors.black),
+            ),
+          ),
+
           const SizedBox(height: 20),
 
           // ===== جدول النقاط =====
@@ -113,6 +129,8 @@ class _HonorScreenState extends State<HonorScreen> {
               _pointRow('صلاة فاتت', '-120', AppColors.danger),
               _pointRow('يوم متتالي', '+15', AppColors.primary),
               _pointRow('أسبوع كامل', '+30', AppColors.primary),
+              _pointRow('عمل جيد صغير / متوسط / كبير', '+10 / +25 / +60', AppColors.success),
+              _pointRow('خطأ صغير / متوسط / كبير', '-10 / -35 / -80', AppColors.danger),
             ]),
           ),
 
@@ -153,6 +171,65 @@ class _HonorScreenState extends State<HonorScreen> {
       ),
     );
   }
+
+
+  Future<void> _showActionDialog() async {
+    int delta = 25;
+    String category = 'متوسط';
+    _actionController.clear();
+    final result = await showDialog<({String title, int delta, String category})>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setDialogState) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: const Text('تسجيل عمل', style: TextStyle(color: AppColors.textPrimary)),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(
+            controller: _actionController,
+            style: const TextStyle(color: AppColors.textPrimary),
+            decoration: const InputDecoration(
+              hintText: 'مثال: صدقة، غضب، تأخير صلاة...',
+              hintStyle: TextStyle(color: AppColors.textSecondary),
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<int>(
+            value: delta,
+            dropdownColor: AppColors.card,
+            style: const TextStyle(color: AppColors.textPrimary),
+            decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'التصنيف', labelStyle: TextStyle(color: AppColors.textSecondary)),
+            items: const [
+              DropdownMenuItem(value: 10, child: Text('عمل جيد صغير  +10')),
+              DropdownMenuItem(value: 25, child: Text('عمل جيد متوسط  +25')),
+              DropdownMenuItem(value: 60, child: Text('عمل جيد كبير  +60')),
+              DropdownMenuItem(value: -10, child: Text('خطأ صغير  -10')),
+              DropdownMenuItem(value: -35, child: Text('خطأ متوسط  -35')),
+              DropdownMenuItem(value: -80, child: Text('خطأ كبير  -80')),
+            ],
+            onChanged: (v) => setDialogState(() {
+              delta = v ?? 25;
+              category = delta.abs() >= 60 ? 'كبير' : delta.abs() >= 25 ? 'متوسط' : 'صغير';
+            }),
+          ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء', style: TextStyle(color: AppColors.textSecondary))),
+          TextButton(
+            onPressed: () {
+              final title = _actionController.text.trim();
+              if (title.isEmpty) return;
+              Navigator.pop(ctx, (title: title, delta: delta, category: category));
+            },
+            child: const Text('تسجيل', style: TextStyle(color: AppColors.primary)),
+          ),
+        ],
+      )),
+    );
+    if (result == null) return;
+    await HonorService.applyAction(title: result.title, delta: result.delta, category: result.category);
+    await _load();
+  }
+
 
   IconData _honorIcon(HonorLevel level) {
     switch (level) {
